@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sovereign | Knowledge is Power</title>
+    <title>Sovereign Data Core | Knowledge is Power</title>
+    <meta name="description" content="An immersive cyberpunk experience exploring information sovereignty and digital freedom.">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,13 +16,30 @@
                     colors: {
                         void: '#020202',
                         blood: '#ff0033',
-                        ash: '#2a2a2a',
+                        'blood-dim': '#7a0018',
+                        ash: '#1a1a1a',
                         ghost: '#f4f4f4',
+                        cyan: '#00f5ff',
+                        'cyan-dim': '#004d52',
+                        amber: '#ffaa00',
                     },
                     fontFamily: {
                         display: ['"Syncopate"', 'sans-serif'],
                         body: ['"Space Grotesk"', 'sans-serif'],
                         mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    animation: {
+                        'spin-slow': 'spin 90s linear infinite',
+                        'spin-reverse': 'spin 60s linear infinite reverse',
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                        'flicker': 'flicker 4s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        flicker: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.85' },
+                            '75%': { opacity: '0.95' },
+                        }
                     }
                 }
             }
@@ -31,12 +49,21 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Space+Grotesk:wght@300;400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Space+Grotesk:wght@300;400;500;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
 
-    <!-- GSAP for Animation -->
+    <!-- GSAP + ScrollTrigger -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 
     <style>
+        :root {
+            --blood: #ff0033;
+            --void: #020202;
+            --ghost: #f4f4f4;
+            --cyan: #00f5ff;
+            --amber: #ffaa00;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -44,64 +71,94 @@
             cursor: crosshair;
         }
 
+        html { scroll-behavior: smooth; }
+
         body {
-            background-color: #020202;
-            color: #f4f4f4;
-            overflow: hidden;
+            background-color: var(--void);
+            color: var(--ghost);
+            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
+            font-family: 'Space Grotesk', sans-serif;
         }
 
-        /* 鼠标跟随的深渊光晕 */
+        /* ─── CURSOR GLOW ─── */
         .cursor-glow {
             position: fixed;
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(255,0,51,0.05) 0%, transparent 60%);
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(255,0,51,0.06) 0%, transparent 65%);
             border-radius: 50%;
             pointer-events: none;
             transform: translate(-50%, -50%);
-            z-index: 0;
+            z-index: 1;
             opacity: 0;
             transition: opacity 2s ease;
+            will-change: transform;
         }
 
+        /* ─── CUSTOM CURSOR DOT ─── */
+        .cursor-dot {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            background: var(--blood);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.1s ease;
+            box-shadow: 0 0 10px var(--blood), 0 0 20px rgba(255,0,51,0.5);
+        }
+        .cursor-ring {
+            position: fixed;
+            width: 28px;
+            height: 28px;
+            border: 1px solid rgba(255,0,51,0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 9998;
+            opacity: 0;
+            transition: opacity 0.5s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+        }
+        body:hover .cursor-dot, body:hover .cursor-ring { opacity: 1; }
+
+        /* ─── NOISE OVERLAY ─── */
         .noise-bg {
             position: fixed;
             inset: 0;
-            z-index: 1;
+            z-index: 2;
             pointer-events: none;
-            opacity: 0.04;
-            background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)"/%3E%3C/svg%3E');
+            opacity: 0.035;
+            background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)"/%3E%3C/svg%3E');
+            background-size: 256px 256px;
+            animation: noiseShift 0.5s steps(2) infinite;
+        }
+        @keyframes noiseShift {
+            0% { background-position: 0 0; }
+            25% { background-position: -15px 5px; }
+            50% { background-position: 5px -10px; }
+            75% { background-position: -5px 15px; }
         }
 
+        /* ─── AMBIENT GLOW ─── */
         .ambient-glow {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 60vw;
-            height: 60vw;
-            background: radial-gradient(circle, rgba(255,0,51,0.08) 0%, rgba(2,2,2,0) 70%);
+            width: 80vw;
+            height: 80vw;
+            max-width: 900px;
+            max-height: 900px;
+            background: radial-gradient(circle, rgba(255,0,51,0.07) 0%, rgba(2,2,2,0) 70%);
             z-index: 0;
             pointer-events: none;
             opacity: 0;
         }
 
-        /* 中央微光数据网格 (打破大面积空洞) */
-        .cyber-grid {
-            position: absolute;
-            inset: 0;
-            background-image: 
-                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 4vw 4vw;
-            mask-image: radial-gradient(circle at center, black 10%, transparent 70%);
-            -webkit-mask-image: radial-gradient(circle at center, black 10%, transparent 70%);
-            z-index: -1;
-            opacity: 0;
-        }
-
-        /* 宏观环境跑马灯文字 */
+        /* ─── BACKGROUND MARQUEE ─── */
         @keyframes marqueeLeft {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
@@ -114,19 +171,20 @@
             position: fixed;
             white-space: nowrap;
             font-family: 'Syncopate', sans-serif;
-            font-size: 18vw;
+            font-size: clamp(12vw, 16vw, 20rem);
             line-height: 0.8;
             font-weight: 700;
             opacity: 0;
             z-index: 0;
             pointer-events: none;
-            color: rgba(255, 255, 255, 0.02);
+            color: rgba(255,255,255,0.018);
             mix-blend-mode: screen;
+            letter-spacing: -0.02em;
         }
-        .marquee-top { top: 5vh; animation: marqueeLeft 80s linear infinite; }
-        .marquee-bottom { bottom: 5vh; animation: marqueeRight 80s linear infinite; }
+        .marquee-top { top: 4vh; animation: marqueeLeft 70s linear infinite; }
+        .marquee-bottom { bottom: 4vh; animation: marqueeRight 70s linear infinite; }
 
-        /* 贯穿全屏的全局结构线 */
+        /* ─── GLOBAL CROSSHAIR ─── */
         .global-crosshair {
             position: fixed;
             inset: 0;
@@ -134,459 +192,1239 @@
             pointer-events: none;
             opacity: 0;
         }
-        .global-crosshair::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.03); }
-        .global-crosshair::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.03); }
-
-        /* 第一阶段：霸王条款墙 */
-        #manifesto-wall {
+        .global-crosshair::before {
+            content: '';
             position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04) 30%, rgba(255,255,255,0.04) 70%, transparent);
+        }
+        .global-crosshair::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(180deg, transparent, rgba(255,255,255,0.04) 30%, rgba(255,255,255,0.04) 70%, transparent);
+        }
+
+        /* ─── CYBER GRID ─── */
+        .cyber-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: clamp(30px, 4vw, 60px) clamp(30px, 4vw, 60px);
+            mask-image: radial-gradient(ellipse at center, black 0%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 75%);
+            z-index: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* ─── SCANLINE EFFECT ─── */
+        .scanlines-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.03) 2px,
+                rgba(0,0,0,0.03) 4px
+            );
+            opacity: 0.5;
+        }
+
+        /* ─── PHASE 1: MANIFESTO WALL ─── */
+        #manifesto-wall {
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 85%;
-            max-width: 1200px;
+            width: min(88vw, 1200px);
             z-index: 10;
             text-align: justify;
-            line-height: 1.8;
+            line-height: 1.9;
         }
 
         .doc-header {
             font-family: 'JetBrains Mono', monospace;
-            font-size: clamp(0.7rem, 1vw, 1rem);
-            color: #ff0033;
-            letter-spacing: 0.2em;
-            margin-bottom: 2rem;
+            font-size: clamp(0.55rem, 0.9vw, 0.85rem);
+            color: var(--blood);
+            letter-spacing: 0.25em;
+            margin-bottom: 2.5rem;
             text-align: center;
             opacity: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
         }
+        .doc-header::before, .doc-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,0,51,0.4));
+        }
+        .doc-header::after { background: linear-gradient(90deg, rgba(255,0,51,0.4), transparent); }
 
         .word {
             display: inline-block;
-            margin-right: 0.25em;
-            color: #3a3a3a; 
-            transition: color 0.3s, background-color 0.3s;
+            margin-right: 0.28em;
+            color: #2e2e2e;
             font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(1rem, 1.8vw, 1.8rem);
+            font-size: clamp(0.85rem, 1.6vw, 1.7rem);
+            transition: color 0.4s ease, background-color 0.4s ease, text-shadow 0.4s ease;
         }
-
-        .word.redacted { background-color: #0a0a0a; color: #0a0a0a; user-select: none; }
+        .word.redacted {
+            background-color: #080808;
+            color: #080808;
+            user-select: none;
+            border-radius: 2px;
+        }
         .word.truth { font-weight: 700; }
-        .word.truth.revealed { color: #ff0033; text-shadow: 0 0 15px rgba(255,0,51,0.4); }
-
-        /* 第二阶段：核心主视觉区 (将 Z-index 提升至 40，确保永远压在侧边栏上方) */
-        #core-hero {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 40; 
-            opacity: 0;
-            pointer-events: none;
+        .word.truth.revealed {
+            color: var(--blood);
+            text-shadow: 0 0 20px rgba(255,0,51,0.5), 0 0 40px rgba(255,0,51,0.2);
         }
 
-        /* 焦点锁定框 */
-        .focus-bracket {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 8vw;
-            color: rgba(255,0,51,0.2);
-            font-weight: 100;
-            opacity: 0;
-        }
-        .bracket-left { left: 5vw; }
-        .bracket-right { right: 5vw; }
-
-        .hero-title {
-            font-family: 'Syncopate', sans-serif;
-            text-transform: uppercase;
-            line-height: 0.85;
-            letter-spacing: -0.05em;
-            text-align: center;
-            mix-blend-mode: screen;
-            position: relative;
-            z-index: 10;
-        }
-
-        .outline-text {
-            color: transparent;
-            -webkit-text-stroke: 2px rgba(255,255,255,0.15);
-            transition: all 0.5s ease;
-        }
-        .outline-text:hover { -webkit-text-stroke: 2px #ff0033; color: rgba(255,0,51,0.05); }
-
-        /* 新增：深黑发光阴影，确保中心文字即使在重叠时也绝对清晰 */
-        .text-dark-glow {
-            text-shadow: 0 4px 15px rgba(2, 2, 2, 0.9), 0 0 30px rgba(2, 2, 2, 1), 0 0 50px rgba(2, 2, 2, 1);
-        }
-
-        /* UI 框架与边框 (Z-index 30，位于中心内容底层) */
-        .border-frame {
-            position: fixed;
-            inset: 2rem;
-            border: 1px solid rgba(255,255,255,0.05);
-            z-index: 30;
-            pointer-events: none;
-            opacity: 0;
-        }
-
-        .ruler-x { position: absolute; top: 0; left: 10%; right: 10%; height: 3px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 40px); }
-        .ruler-y { position: absolute; left: 0; top: 10%; bottom: 10%; width: 3px; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 40px); }
-
-        .corner { position: absolute; width: 20px; height: 20px; border-color: #ff0033; border-style: solid; }
-        .c-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
-        .c-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
-        .c-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
-        .c-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
-
-        /* 扫描线 */
+        /* ─── SCANLINE BAR ─── */
         #scanline {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 2px;
-            background: #ff0033;
-            box-shadow: 0 0 30px 5px rgba(255,0,51,0.3);
+            height: 3px;
+            background: linear-gradient(90deg, transparent 0%, var(--blood) 20%, #fff 50%, var(--blood) 80%, transparent 100%);
+            box-shadow: 0 0 40px 8px rgba(255,0,51,0.4), 0 0 80px 20px rgba(255,0,51,0.15);
             z-index: 100;
             opacity: 0;
             pointer-events: none;
         }
 
-        /* 侧边音频条 */
-        @keyframes eq { 0%, 100% { height: 10%; } 50% { height: 100%; } }
-        .eq-bar { width: 3px; background: rgba(255,0,51,0.7); animation: eq 1s ease-in-out infinite; transform-origin: bottom; }
-        .eq-bar:nth-child(1) { animation-duration: 0.7s; }
-        .eq-bar:nth-child(2) { animation-duration: 1.1s; }
-        .eq-bar:nth-child(3) { animation-duration: 0.9s; }
-        .eq-bar:nth-child(4) { animation-duration: 1.3s; }
-        .eq-bar:nth-child(5) { animation-duration: 0.8s; }
-
-        /* 新增：滚动区域垂直羽化遮罩，使内容顶部平滑淡出，不生硬被切断 */
-        .feed-mask {
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
-            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+        /* ─── PHASE 2: CORE HERO ─── */
+        #core-hero {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 40;
+            opacity: 0;
+            pointer-events: none;
         }
 
-        ::-webkit-scrollbar { width: 0px; }
+        /* ─── FOCUS BRACKETS ─── */
+        .focus-bracket {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(4rem, 8vw, 10rem);
+            color: rgba(255,0,51,0.18);
+            font-weight: 100;
+            opacity: 0;
+            line-height: 1;
+            transition: color 0.4s ease;
+        }
+        .bracket-left { left: clamp(1rem, 5vw, 6vw); }
+        .bracket-right { right: clamp(1rem, 5vw, 6vw); }
+        #core-hero:hover .focus-bracket { color: rgba(255,0,51,0.35); }
+
+        /* ─── HERO TITLE ─── */
+        .hero-title {
+            font-family: 'Syncopate', sans-serif;
+            text-transform: uppercase;
+            line-height: 0.83;
+            letter-spacing: -0.04em;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .title-solid {
+            color: var(--ghost);
+            text-shadow:
+                0 0 40px rgba(244,244,244,0.08),
+                0 4px 20px rgba(2,2,2,0.95),
+                0 0 60px rgba(2,2,2,1);
+        }
+
+        .outline-text {
+            color: transparent;
+            -webkit-text-stroke: 1.5px rgba(255,255,255,0.18);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .outline-text:hover {
+            -webkit-text-stroke: 1.5px var(--blood);
+            color: rgba(255,0,51,0.04);
+            text-shadow: 0 0 60px rgba(255,0,51,0.15);
+        }
+
+        .text-dark-glow {
+            text-shadow:
+                0 4px 20px rgba(2,2,2,0.98),
+                0 0 40px rgba(2,2,2,1),
+                0 0 80px rgba(2,2,2,1);
+        }
+
+        /* ─── UI FRAME ─── */
+        .border-frame {
+            position: fixed;
+            inset: clamp(0.75rem, 1.5vw, 2rem);
+            border: 1px solid rgba(255,255,255,0.04);
+            z-index: 30;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .ruler-x {
+            position: absolute;
+            top: 0;
+            left: 8%;
+            right: 8%;
+            height: 4px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(255,255,255,0.12) 0,
+                rgba(255,255,255,0.12) 1px,
+                transparent 1px,
+                transparent 20px,
+                rgba(255,255,255,0.05) 20px,
+                rgba(255,255,255,0.05) 21px,
+                transparent 21px,
+                transparent 40px
+            );
+        }
+        .ruler-y {
+            position: absolute;
+            left: 0;
+            top: 8%;
+            bottom: 8%;
+            width: 4px;
+            background: repeating-linear-gradient(
+                180deg,
+                rgba(255,255,255,0.12) 0,
+                rgba(255,255,255,0.12) 1px,
+                transparent 1px,
+                transparent 20px,
+                rgba(255,255,255,0.05) 20px,
+                rgba(255,255,255,0.05) 21px,
+                transparent 21px,
+                transparent 40px
+            );
+        }
+
+        .corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-color: var(--blood);
+            border-style: solid;
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+        .border-frame:hover .corner { width: 32px; height: 32px; }
+        .c-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+        .c-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+        .c-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+        .c-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+        /* ─── EQUALIZER BARS ─── */
+        @keyframes eq {
+            0%, 100% { transform: scaleY(0.1); }
+            50% { transform: scaleY(1); }
+        }
+        .eq-bar {
+            width: 3px;
+            height: 16px;
+            background: var(--blood);
+            animation: eq 1s ease-in-out infinite;
+            transform-origin: bottom;
+            border-radius: 1px;
+        }
+        .eq-bar:nth-child(1) { animation-duration: 0.65s; opacity: 0.9; }
+        .eq-bar:nth-child(2) { animation-duration: 1.1s; opacity: 0.7; }
+        .eq-bar:nth-child(3) { animation-duration: 0.85s; opacity: 0.9; }
+        .eq-bar:nth-child(4) { animation-duration: 1.3s; opacity: 0.65; }
+        .eq-bar:nth-child(5) { animation-duration: 0.75s; opacity: 0.8; }
+        .eq-bar:nth-child(6) { animation-duration: 1.05s; opacity: 0.7; }
+
+        /* ─── FEED MASK ─── */
+        .feed-mask {
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 100%);
+        }
+
+        /* ─── GLITCH EFFECT ─── */
+        @keyframes glitch-1 {
+            0%, 100% { clip-path: inset(0 0 95% 0); transform: translate(-2px, 0); }
+            20% { clip-path: inset(30% 0 50% 0); transform: translate(2px, 0); }
+            40% { clip-path: inset(60% 0 20% 0); transform: translate(-1px, 0); }
+            60% { clip-path: inset(80% 0 5% 0); transform: translate(1px, 0); }
+            80% { clip-path: inset(10% 0 75% 0); transform: translate(-2px, 0); }
+        }
+        @keyframes glitch-2 {
+            0%, 100% { clip-path: inset(50% 0 30% 0); transform: translate(2px, 0); }
+            20% { clip-path: inset(10% 0 70% 0); transform: translate(-2px, 0); }
+            40% { clip-path: inset(70% 0 10% 0); transform: translate(1px, 0); }
+            60% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 0); }
+            80% { clip-path: inset(85% 0 5% 0); transform: translate(2px, 0); }
+        }
+
+        .glitch-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .glitch-wrapper::before,
+        .glitch-wrapper::after {
+            content: attr(data-text);
+            position: absolute;
+            inset: 0;
+            font-family: inherit;
+            font-size: inherit;
+            font-weight: inherit;
+            letter-spacing: inherit;
+            opacity: 0;
+        }
+        .glitch-wrapper::before {
+            color: var(--cyan);
+            animation: glitch-1 4s ease-in-out infinite;
+        }
+        .glitch-wrapper::after {
+            color: var(--blood);
+            animation: glitch-2 4s ease-in-out infinite;
+            animation-delay: 0.1s;
+        }
+        .glitch-wrapper.active::before,
+        .glitch-wrapper.active::after {
+            opacity: 0.7;
+        }
+
+        /* ─── PROGRESS BAR ─── */
+        .decrypt-bar {
+            height: 2px;
+            background: linear-gradient(90deg, var(--blood), rgba(255,0,51,0.3));
+            transform-origin: left;
+            transform: scaleX(0);
+        }
+
+        /* ─── NODE STATUS RING ─── */
+        .status-ring {
+            animation: spin 25s linear infinite;
+            transform-origin: center;
+        }
+        .status-ring-inner {
+            animation: spin 15s linear infinite reverse;
+            transform-origin: center;
+        }
+
+        /* ─── TERMINAL LINES ─── */
+        .terminal-line {
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .terminal-line.typing {
+            animation: typing 0.5s steps(30) forwards;
+        }
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        /* ─── PARTICLE CANVAS ─── */
+        #particle-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* ─── SCROLL INDICATOR ─── */
+        .scroll-hint {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0;
+            z-index: 50;
+        }
+        .scroll-hint-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(180deg, transparent, var(--blood));
+            animation: scrollPulse 2s ease-in-out infinite;
+        }
+        @keyframes scrollPulse {
+            0%, 100% { opacity: 0.3; transform: scaleY(0.5); }
+            50% { opacity: 1; transform: scaleY(1); }
+        }
+
+        /* ─── DATA METRIC CARDS ─── */
+        .metric-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-left: 2px solid var(--blood);
+            padding: 0.5rem 0.75rem;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        .metric-card:hover {
+            background: rgba(255,0,51,0.04);
+            border-color: rgba(255,0,51,0.3);
+        }
+
+        /* ─── ENTER BUTTON ─── */
+        #enter-btn {
+            position: relative;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.3em;
+            transition: color 0.4s ease;
+        }
+        #enter-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--ghost);
+            transform: translateX(-101%);
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 0;
+        }
+        #enter-btn:hover::before { transform: translateX(0); }
+        #enter-btn:hover { color: var(--void); }
+        #enter-btn span { position: relative; z-index: 1; }
+
+        /* ─── SIGNAL BARS ─── */
+        .signal-bar {
+            width: 4px;
+            background: var(--blood);
+            border-radius: 1px;
+            opacity: 0.3;
+            transition: opacity 0.3s ease, height 0.3s ease;
+        }
+        .signal-bar.active { opacity: 1; }
+
+        /* ─── TOOLTIP ─── */
+        [data-tooltip] { position: relative; }
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20,20,20,0.95);
+            border: 1px solid rgba(255,0,51,0.3);
+            color: var(--ghost);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.15em;
+            padding: 0.3rem 0.6rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 200;
+        }
+        [data-tooltip]:hover::after { opacity: 1; }
+
+        /* ─── VIGNETTE ─── */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(2,2,2,0.7) 100%);
+        }
+
+        /* ─── HORIZONTAL LINE ACCENT ─── */
+        .line-accent {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: rgba(255,0,51,0.6);
+        }
+        .line-accent::before, .line-accent::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: currentColor;
+            opacity: 0.4;
+        }
+
+        /* ─── RESPONSIVE ─── */
+        ::-webkit-scrollbar { width: 2px; }
+        ::-webkit-scrollbar-track { background: var(--void); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,0,51,0.3); border-radius: 1px; }
+
+        @media (max-width: 768px) {
+            .focus-bracket { font-size: 3.5rem; }
+            .hero-title { letter-spacing: -0.03em; }
+        }
+
+        /* ─── LOADING SCREEN ─── */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--void);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+        }
+        .load-bar-track {
+            width: min(320px, 70vw);
+            height: 1px;
+            background: rgba(255,255,255,0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .load-bar-fill {
+            position: absolute;
+            inset: 0;
+            background: var(--blood);
+            transform-origin: left;
+            transform: scaleX(0);
+            box-shadow: 0 0 20px rgba(255,0,51,0.5);
+        }
+        .load-percent {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--blood);
+            letter-spacing: 0.3em;
+        }
+        .load-title {
+            font-family: 'Syncopate', sans-serif;
+            font-size: clamp(0.9rem, 2vw, 1.4rem);
+            letter-spacing: 0.5em;
+            color: rgba(255,255,255,0.15);
+            text-transform: uppercase;
+        }
+        .load-status {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.25);
+            letter-spacing: 0.2em;
+            min-height: 1em;
+        }
     </style>
 </head>
 
 <body>
 
+    <!-- ─── LOADING SCREEN ─── -->
+    <div id="loading-screen">
+        <div class="load-title">SOVEREIGN DATA CORE</div>
+        <div class="load-bar-track">
+            <div class="load-bar-fill" id="load-fill"></div>
+        </div>
+        <div class="load-percent" id="load-percent">0%</div>
+        <div class="load-status" id="load-status">INITIALIZING SECURE CHANNEL...</div>
+    </div>
+
+    <!-- ─── CUSTOM CURSORS ─── -->
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-ring" id="cursor-ring"></div>
+
+    <!-- ─── BACKGROUND LAYERS ─── -->
+    <canvas id="particle-canvas"></canvas>
     <div class="cursor-glow" id="cursor-glow"></div>
     <div class="noise-bg"></div>
+    <div class="scanlines-overlay"></div>
+    <div class="vignette"></div>
     <div class="ambient-glow" id="ambient"></div>
-    
-    <!-- 宏观背景与网格 (提供空间深度) -->
     <div class="global-crosshair" id="global-crosshair"></div>
     <div class="cyber-grid" id="cyber-grid"></div>
 
-    <!-- 跑马灯文字 -->
+    <!-- ─── BACKGROUND MARQUEE ─── -->
     <div class="bg-marquee marquee-top" id="marquee-1">
-        KNOWLEDGE IS POWER • DEFEND YOUR SPEECH • KNOWLEDGE IS POWER • DEFEND YOUR SPEECH • KNOWLEDGE IS POWER • DEFEND YOUR SPEECH •
+        KNOWLEDGE IS POWER&nbsp;&nbsp;•&nbsp;&nbsp;DEFEND YOUR SPEECH&nbsp;&nbsp;•&nbsp;&nbsp;KNOWLEDGE IS POWER&nbsp;&nbsp;•&nbsp;&nbsp;DEFEND YOUR SPEECH&nbsp;&nbsp;•&nbsp;&nbsp;KNOWLEDGE IS POWER&nbsp;&nbsp;•&nbsp;&nbsp;DEFEND YOUR SPEECH&nbsp;&nbsp;•&nbsp;&nbsp;
     </div>
     <div class="bg-marquee marquee-bottom" id="marquee-2">
-        THE ARCHITECTURE FRACTURES • SOVEREIGN MIND • THE ARCHITECTURE FRACTURES • SOVEREIGN MIND • THE ARCHITECTURE FRACTURES • SOVEREIGN MIND •
+        THE ARCHITECTURE FRACTURES&nbsp;&nbsp;•&nbsp;&nbsp;SOVEREIGN MIND&nbsp;&nbsp;•&nbsp;&nbsp;THE ARCHITECTURE FRACTURES&nbsp;&nbsp;•&nbsp;&nbsp;SOVEREIGN MIND&nbsp;&nbsp;•&nbsp;&nbsp;THE ARCHITECTURE FRACTURES&nbsp;&nbsp;•&nbsp;&nbsp;SOVEREIGN MIND&nbsp;&nbsp;•&nbsp;&nbsp;
     </div>
 
+    <!-- ─── SCANLINE BAR ─── -->
     <div id="scanline"></div>
 
-    <!-- UI 外框与监测数据 -->
+    <!-- ─── UI FRAME ─── -->
     <div class="border-frame" id="ui-frame">
         <div class="ruler-x"></div>
         <div class="ruler-y"></div>
         <div class="ruler-x" style="top: auto; bottom: 0;"></div>
         <div class="ruler-y" style="left: auto; right: 0;"></div>
-
         <div class="corner c-tl"></div>
         <div class="corner c-tr"></div>
         <div class="corner c-bl"></div>
         <div class="corner c-br"></div>
-        
-        <!-- 左侧拦截日志：降低基础透明度，悬停时恢复。调整宽度与高度定位避开中心 -->
-        <div class="absolute left-6 md:left-10 top-[60%] -translate-y-1/2 w-48 hidden md:block font-mono text-[10px] text-gray-600 leading-relaxed opacity-40 hover:opacity-100 transition-opacity duration-500" id="side-feed">
-            <div class="mb-4 text-blood font-bold tracking-[0.2em] border-b border-gray-800 pb-2 flex justify-between items-center">
-                <span>SYS.CENSOR_LOG</span>
-                <div class="flex items-end gap-[2px] h-4">
-                    <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-                </div>
-            </div>
-            <!-- 添加 .feed-mask 类实现顶部渐出 -->
-            <div id="feed-content" class="h-56 overflow-hidden relative flex flex-col justify-end space-y-1 feed-mask"></div>
-        </div>
 
-        <!-- 右侧节点状态：稍微降低透明度。下沉定位避开中心文本 -->
-        <div class="absolute right-6 md:right-10 top-[60%] -translate-y-1/2 w-40 hidden md:flex flex-col items-end font-mono text-[10px] text-gray-500 text-right opacity-60 hover:opacity-100 transition-opacity duration-500" id="right-feed">
-            <svg class="w-20 h-20 animate-[spin_20s_linear_infinite] mb-6 text-gray-800" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 6" />
-                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="20 10" />
-                <circle cx="50" cy="50" r="25" fill="none" stroke="rgba(255,0,51,0.2)" stroke-width="1" />
-                <path d="M50 0 L50 25 M50 75 L50 100 M0 50 L25 50 M75 50 L100 50" stroke="#ff0033" stroke-width="1" opacity="0.5"/>
-                <circle cx="50" cy="50" r="4" fill="#ff0033" class="animate-pulse" />
-            </svg>
-            <div class="tracking-[0.3em] mb-2 text-gray-400">NODE.TOPOGRAPHY</div>
-            <div class="text-blood font-bold tracking-[0.4em] mb-6 text-xs">UNRESTRICTED</div>
-            <div class="leading-loose space-y-1">
-                INFO_FLOW: <span class="text-ghost">DECENTRALIZED</span><br>
-                CENSORSHIP: <span class="text-blood">BYPASSED</span><br>
-                SPEECH: <span class="text-ghost">LIBERATED</span><br>
-                UPTIME: <span class="text-ghost" id="uptime-counter">00:00:00</span>
-            </div>
-        </div>
-        
-        <!-- 角落状态文本 -->
-        <div class="absolute top-6 left-6 font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase flex items-center gap-3">
-            <span class="w-2 h-2 bg-blood animate-pulse rounded-full"></span>
-            SECURE_CHANNEL_OVR
-        </div>
-        <div class="absolute top-6 right-6 font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase text-right">
-            DOC_REF: OMEGA-01<br>
+        <!-- TOP LEFT: STATUS -->
+        <div class="absolute top-4 left-4 md:top-6 md:left-6 font-mono text-[9px] md:text-[10px] text-gray-500 tracking-[0.3em] uppercase flex items-center gap-3">
+            <span class="w-2 h-2 bg-blood rounded-full animate-pulse shadow-[0_0_8px_rgba(255,0,51,0.8)]"></span>
+            <span class="hidden sm:inline">SECURE_CHANNEL</span>
+            <span class="sm:hidden">SEC_CH</span>
+            <span class="text-gray-700">|</span>
             <span class="text-blood font-bold" id="status-text">DECRYPTED</span>
         </div>
 
-        <div class="absolute bottom-6 left-6">
-            <p class="font-body text-xs md:text-sm text-gray-400 tracking-[0.2em]" id="sub-msg">THE ARCHITECTURE OF CENSORSHIP IS FRACTURING.</p>
+        <!-- TOP RIGHT: DOC REF + SIGNAL -->
+        <div class="absolute top-4 right-4 md:top-6 md:right-6 font-mono text-[9px] md:text-[10px] text-gray-500 tracking-[0.25em] uppercase text-right flex flex-col items-end gap-1">
+            <div>DOC_REF: <span class="text-gray-400">OMEGA-01</span></div>
+            <div class="flex items-end gap-[3px] h-3" id="signal-bars">
+                <div class="signal-bar active" style="height: 4px;"></div>
+                <div class="signal-bar active" style="height: 7px;"></div>
+                <div class="signal-bar active" style="height: 10px;"></div>
+                <div class="signal-bar active" style="height: 13px;"></div>
+                <div class="signal-bar" style="height: 13px;"></div>
+            </div>
         </div>
-        <div class="absolute bottom-0 right-0 pointer-events-auto flex justify-end">
-            <button class="font-display text-[10px] md:text-xs text-ghost tracking-[0.4em] font-bold px-8 py-6 border-l border-t border-gray-800 hover:bg-ghost hover:text-void transition-all duration-500 relative overflow-hidden group" id="enter-btn">
-                <span class="relative z-10">ENTER SOVEREIGN NODE</span>
-                <div class="absolute inset-0 bg-ghost w-0 group-hover:w-full transition-all duration-500 z-0"></div>
+
+        <!-- LEFT: CENSOR LOG FEED -->
+        <div class="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 mt-8 w-44 md:w-52 hidden md:block font-mono text-[9px] md:text-[10px] text-gray-600 leading-relaxed opacity-30 hover:opacity-100 transition-opacity duration-700" id="side-feed">
+            <div class="mb-3 text-blood font-bold tracking-[0.2em] border-b border-gray-800 pb-2 flex justify-between items-end">
+                <span>SYS.CENSOR_LOG</span>
+                <div class="flex items-end gap-[2px] h-4">
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                </div>
+            </div>
+            <div class="mb-2 text-gray-700 text-[8px] tracking-[0.15em]">INTERCEPT STREAM v3.1</div>
+            <div class="w-full bg-gray-900 h-[1px] mb-2">
+                <div class="decrypt-bar h-full w-full" id="intercept-bar"></div>
+            </div>
+            <div id="feed-content" class="h-52 overflow-hidden flex flex-col justify-end space-y-[3px] feed-mask"></div>
+        </div>
+
+        <!-- RIGHT: NODE STATUS -->
+        <div class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 mt-8 w-36 md:w-44 hidden md:flex flex-col items-end font-mono text-[9px] md:text-[10px] text-gray-500 text-right opacity-30 hover:opacity-100 transition-opacity duration-700" id="right-feed">
+            <svg class="w-16 h-16 md:w-20 md:h-20 mb-5" viewBox="0 0 100 100">
+                <g class="status-ring">
+                    <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-dasharray="1 14"/>
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" stroke-dasharray="30 8 8 8"/>
+                </g>
+                <g class="status-ring-inner">
+                    <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,0,51,0.18)" stroke-width="1" stroke-dasharray="2 7"/>
+                    <polygon points="50,8 88,29 88,71 50,92 12,71 12,29" fill="none" stroke="rgba(255,0,51,0.25)" stroke-width="0.5" stroke-dasharray="4 10"/>
+                </g>
+                <circle cx="50" cy="50" r="20" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+                <path d="M50 20 L50 38 M50 62 L50 80 M20 50 L38 50 M62 50 L80 50" stroke="rgba(255,0,51,0.3)" stroke-width="0.75" opacity="0.6"/>
+                <circle cx="50" cy="50" r="4" fill="var(--blood)" class="animate-pulse" filter="url(#glow-filter)"/>
+                <defs>
+                    <filter id="glow-filter">
+                        <feGaussianBlur stdDeviation="2" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+            </svg>
+
+            <div class="tracking-[0.25em] mb-1 text-gray-400 text-[8px]">NODE.TOPOGRAPHY</div>
+            <div class="text-blood font-bold tracking-[0.35em] mb-5 text-[10px]">UNRESTRICTED</div>
+
+            <div class="space-y-2 w-full">
+                <div class="metric-card text-[8px]">
+                    <div class="text-gray-600 mb-1">INFO_FLOW</div>
+                    <div class="text-ghost font-bold">DECENTRALIZED</div>
+                </div>
+                <div class="metric-card text-[8px]">
+                    <div class="text-gray-600 mb-1">CENSORSHIP</div>
+                    <div class="text-blood font-bold">BYPASSED</div>
+                </div>
+                <div class="metric-card text-[8px]">
+                    <div class="text-gray-600 mb-1">SPEECH</div>
+                    <div class="text-ghost font-bold">LIBERATED</div>
+                </div>
+                <div class="metric-card text-[8px]" data-tooltip="SYSTEM UPTIME">
+                    <div class="text-gray-600 mb-1">UPTIME</div>
+                    <div class="text-ghost font-bold" id="uptime-counter">00:00:00</div>
+                </div>
+                <div class="metric-card text-[8px]">
+                    <div class="text-gray-600 mb-1">NODES_ACTIVE</div>
+                    <div class="text-ghost font-bold" id="node-count">---</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM LEFT: STATUS MESSAGE -->
+        <div class="absolute bottom-4 left-4 md:bottom-6 md:left-6">
+            <p class="font-mono text-[9px] md:text-[10px] text-gray-500 tracking-[0.2em] uppercase" id="sub-msg">THE ARCHITECTURE OF CENSORSHIP IS FRACTURING.</p>
+            <div class="mt-1 flex items-center gap-2">
+                <div class="w-1 h-1 rounded-full bg-blood opacity-60 animate-pulse"></div>
+                <span class="font-mono text-[8px] text-gray-700 tracking-[0.15em]">SOVEREIGN_ENGINE v4.0.1</span>
+            </div>
+        </div>
+
+        <!-- BOTTOM RIGHT: ENTER BUTTON -->
+        <div class="absolute bottom-0 right-0 pointer-events-auto">
+            <button id="enter-btn" class="font-display text-[9px] md:text-[10px] text-ghost tracking-[0.4em] font-bold px-6 md:px-8 py-5 md:py-6 border-l border-t border-gray-800">
+                <span>ENTER SOVEREIGN NODE</span>
             </button>
         </div>
     </div>
 
-    <!-- 阶段一：审查条款墙 -->
+    <!-- ─── PHASE 1: MANIFESTO WALL ─── -->
     <div id="manifesto-wall">
-        <div class="doc-header" id="doc-header">[ GLOBAL INFORMATION CONTROL - DIRECTIVE 77 ]</div>
+        <div class="doc-header" id="doc-header">GLOBAL INFORMATION CONTROL — DIRECTIVE 77</div>
         <div id="manifesto-content"></div>
     </div>
 
-    <!-- 阶段二：真理核心主视觉 -->
+    <!-- ─── PHASE 2: CORE HERO ─── -->
     <main id="core-hero">
-        
-        <!-- 强化的神圣几何背景 -->
+
+        <!-- SACRED GEOMETRY SVG -->
         <div class="absolute inset-0 flex items-center justify-center opacity-0 pointer-events-none z-0" id="core-graphic">
-            <svg width="85vw" height="85vw" viewBox="0 0 600 600" class="text-gray-900 max-w-[900px] max-h-[900px]">
-                <!-- 外围慢速旋转环 -->
-                <g class="animate-[spin_90s_linear_infinite]">
-                    <circle cx="300" cy="300" r="280" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="1 15"/>
-                    <circle cx="300" cy="300" r="220" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="40 5 10 5"/>
+            <svg width="90vw" height="90vw" viewBox="0 0 600 600" class="max-w-[950px] max-h-[950px]">
+                <defs>
+                    <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="rgba(255,0,51,0.12)"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <filter id="svgGlow">
+                        <feGaussianBlur stdDeviation="3" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Outer slow rings -->
+                <g style="animation: spin 100s linear infinite; transform-origin: 300px 300px;">
+                    <circle cx="300" cy="300" r="285" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.75" stroke-dasharray="1 18"/>
+                    <circle cx="300" cy="300" r="260" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="50 10 5 10"/>
                 </g>
-                <!-- 内侧反向旋转环 -->
-                <g class="animate-[spin_60s_linear_infinite_reverse]">
-                    <circle cx="300" cy="300" r="170" fill="none" stroke="rgba(255,0,51,0.15)" stroke-width="1" stroke-dasharray="2 8"/>
-                    <polygon points="300,60 508,180 508,420 300,540 92,420 92,180" fill="none" stroke="#ff0033" stroke-width="0.5" stroke-dasharray="4 8" opacity="0.4" />
+
+                <!-- Mid reverse rings -->
+                <g style="animation: spin 65s linear infinite reverse; transform-origin: 300px 300px;">
+                    <circle cx="300" cy="300" r="200" fill="none" stroke="rgba(255,0,51,0.1)" stroke-width="1" stroke-dasharray="3 9"/>
+                    <polygon points="300,50 520,175 520,425 300,550 80,425 80,175" fill="none" stroke="rgba(255,0,51,0.2)" stroke-width="0.75" stroke-dasharray="5 12"/>
                 </g>
-                <circle cx="300" cy="300" r="150" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
-                <!-- 核心数据十字 -->
-                <path d="M 300 130 L 300 470 M 130 300 L 470 300" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+
+                <!-- Inner counter ring -->
+                <g style="animation: spin 40s linear infinite; transform-origin: 300px 300px;">
+                    <circle cx="300" cy="300" r="145" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-dasharray="2 6"/>
+                    <polygon points="300,155 430,228 430,372 300,445 170,372 170,228" fill="none" stroke="rgba(255,0,51,0.12)" stroke-width="0.5" stroke-dasharray="3 8"/>
+                </g>
+
+                <!-- Static structural lines -->
+                <circle cx="300" cy="300" r="100" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+                <path d="M300 100 L300 500 M100 300 L500 300 M170 170 L430 430 M430 170 L170 430" stroke="rgba(255,255,255,0.025)" stroke-width="0.75"/>
+
+                <!-- Core glow -->
+                <circle cx="300" cy="300" r="80" fill="url(#coreGrad)"/>
+
+                <!-- Data nodes on outer ring -->
+                <circle cx="300" cy="15" r="3" fill="rgba(255,0,51,0.4)" filter="url(#svgGlow)"/>
+                <circle cx="585" cy="300" r="3" fill="rgba(255,0,51,0.4)" filter="url(#svgGlow)"/>
+                <circle cx="300" cy="585" r="3" fill="rgba(255,0,51,0.4)" filter="url(#svgGlow)"/>
+                <circle cx="15" cy="300" r="3" fill="rgba(255,0,51,0.4)" filter="url(#svgGlow)"/>
+
+                <!-- Center pulse -->
+                <circle cx="300" cy="300" r="6" fill="rgba(255,0,51,0.6)" filter="url(#svgGlow)" style="animation: pulse 2s ease-in-out infinite;"/>
             </svg>
         </div>
 
-        <!-- 焦点锁定括号：调整边距避免小屏幕拥挤 -->
-        <div class="focus-bracket bracket-left !left-[8vw]" id="bracket-l">[</div>
-        <div class="focus-bracket bracket-right !right-[8vw]" id="bracket-r">]</div>
+        <!-- FOCUS BRACKETS -->
+        <div class="focus-bracket bracket-left" id="bracket-l">[</div>
+        <div class="focus-bracket bracket-right" id="bracket-r">]</div>
 
         <div class="relative z-10 flex flex-col items-center w-full px-4">
-            
-            <div class="mb-4 font-mono text-[10px] text-blood tracking-[0.4em] uppercase opacity-0 text-dark-glow" id="hero-label">
-                <span class="inline-block w-8 h-[1px] bg-blood mr-3 align-middle"></span>
+
+            <!-- LABEL -->
+            <div class="mb-5 font-mono text-[9px] md:text-[10px] text-blood tracking-[0.45em] uppercase opacity-0 text-dark-glow flex items-center gap-3" id="hero-label">
+                <span class="w-8 h-[1px] bg-blood inline-block"></span>
                 NODE_AUTHORIZATION : GRANTED
-                <span class="inline-block w-8 h-[1px] bg-blood ml-3 align-middle"></span>
+                <span class="w-8 h-[1px] bg-blood inline-block"></span>
             </div>
 
-            <h1 class="hero-title text-[13vw] md:text-[10vw] w-full max-w-7xl mx-auto">
-                <div class="overflow-hidden"><span class="block translate-y-full opacity-0" id="title-1">Knowledge</span></div>
-                <div class="overflow-hidden"><span class="block outline-text translate-y-full opacity-0" id="title-2">Is Power</span></div>
+            <!-- MAIN TITLE with glitch -->
+            <h1 class="hero-title text-[13vw] md:text-[10vw] lg:text-[9vw] w-full max-w-7xl mx-auto select-none">
+                <div class="overflow-hidden">
+                    <span class="block translate-y-full opacity-0 title-solid glitch-wrapper" id="title-1" data-text="Knowledge">Knowledge</span>
+                </div>
+                <div class="overflow-hidden">
+                    <span class="block outline-text translate-y-full opacity-0 glitch-wrapper" id="title-2" data-text="Is Power">Is Power</span>
+                </div>
             </h1>
-            
-            <!-- 实时跳动的哈希流：从底部抽离，上移至标题下方，彻底解决底部UI重叠 -->
-            <div class="font-mono text-[9px] text-blood/40 tracking-[0.2em] break-all mt-4 mb-2 max-w-md text-center" id="live-hash">
+
+            <!-- LIVE HASH -->
+            <div class="font-mono text-[8px] md:text-[9px] text-blood/35 tracking-[0.15em] break-all mt-5 mb-3 max-w-sm md:max-w-md text-center" id="live-hash">
                 0x0000000000000000000000000000000000000000
             </div>
 
-            <!-- 添加 text-dark-glow 确保文字切断背景线条且清晰可见。缩小宽度为 max-w-lg 避免与侧边栏相撞 -->
-            <div class="max-w-lg mt-4 px-4 text-center opacity-0 text-dark-glow" id="profound-text">
-                <p class="font-body text-sm text-gray-400 leading-relaxed mb-6">
-                    They can burn the archives, they can filter the network, but they cannot erase an idea. Information is the ultimate catalyst for liberation.
-                    <br><br>
-                    <span class="text-ghost font-bold tracking-[0.1em]">Defend your fundamental right to free expression. Speak the truth.</span>
+            <!-- DECRYPT PROGRESS -->
+            <div class="w-48 md:w-64 mb-5 opacity-0" id="decrypt-progress">
+                <div class="flex justify-between font-mono text-[8px] text-gray-600 mb-1 tracking-[0.2em]">
+                    <span>DECRYPT_STREAM</span>
+                    <span id="decrypt-pct">100%</span>
+                </div>
+                <div class="h-[1px] bg-gray-900 w-full overflow-hidden">
+                    <div class="h-full bg-blood shadow-[0_0_10px_rgba(255,0,51,0.5)]" id="decrypt-fill" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- PROFOUND TEXT -->
+            <div class="max-w-md md:max-w-lg mt-2 px-4 text-center opacity-0 text-dark-glow" id="profound-text">
+                <p class="font-body text-xs md:text-sm text-gray-400 leading-relaxed mb-5">
+                    They can burn the archives. They can filter the network. But they cannot erase an idea lodged in a sovereign mind.
+                    Information is the ultimate catalyst for liberation.
+                </p>
+                <div class="line-accent font-mono text-[9px] text-blood tracking-[0.3em] mb-5">
+                    FREE EXPRESSION IS NON-NEGOTIABLE
+                </div>
+                <p class="font-body text-xs text-gray-500 leading-relaxed">
+                    <span class="text-ghost font-bold tracking-[0.08em]">Defend your fundamental right to free expression. Speak the truth. Build the resistance.</span>
                 </p>
             </div>
+
         </div>
+
+        <!-- SCROLL HINT -->
+        <div class="scroll-hint" id="scroll-hint">
+            <span class="font-mono text-[8px] text-gray-700 tracking-[0.3em]">SCROLL</span>
+            <div class="scroll-hint-line"></div>
+        </div>
+
     </main>
 
     <script>
-        // --- 鼠标交互光晕 ---
+    (function() {
+        'use strict';
+
+        // ─── LOADING SEQUENCE ───
+        const loadFill = document.getElementById('load-fill');
+        const loadPct  = document.getElementById('load-percent');
+        const loadStat = document.getElementById('load-status');
+        const loadScr  = document.getElementById('loading-screen');
+
+        const loadSteps = [
+            'INITIALIZING SECURE CHANNEL...',
+            'ESTABLISHING ENCRYPTED TUNNEL...',
+            'BYPASSING FIREWALL NODES...',
+            'LOADING SOVEREIGN ENGINE v4.0.1...',
+            'DECRYPTING MEMORY BLOCKS...',
+            'CALIBRATING HUD INTERFACE...',
+            'ACCESS GRANTED — WELCOME.',
+        ];
+
+        let loadProgress = 0;
+        const loadInterval = setInterval(() => {
+            loadProgress += Math.random() * 18 + 4;
+            if (loadProgress > 100) loadProgress = 100;
+
+            gsap.to(loadFill, { scaleX: loadProgress / 100, duration: 0.3, ease: 'power2.out' });
+            loadPct.textContent = Math.floor(loadProgress) + '%';
+            loadStat.textContent = loadSteps[Math.min(Math.floor(loadProgress / 15), loadSteps.length - 1)];
+
+            if (loadProgress >= 100) {
+                clearInterval(loadInterval);
+                setTimeout(() => {
+                    gsap.to(loadScr, {
+                        opacity: 0,
+                        duration: 0.8,
+                        ease: 'power2.inOut',
+                        onComplete: () => {
+                            loadScr.style.display = 'none';
+                            startExperience();
+                        }
+                    });
+                }, 400);
+            }
+        }, 120);
+
+        // ─── CUSTOM CURSOR ───
+        const cursorDot  = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
         const cursorGlow = document.getElementById('cursor-glow');
+        let mouseX = 0, mouseY = 0;
+        let ringX = 0, ringY = 0;
+
         document.addEventListener('mousemove', (e) => {
-            cursorGlow.style.left = e.clientX + 'px';
-            cursorGlow.style.top = e.clientY + 'px';
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorDot.style.left  = mouseX + 'px';
+            cursorDot.style.top   = mouseY + 'px';
+            cursorGlow.style.left = mouseX + 'px';
+            cursorGlow.style.top  = mouseY + 'px';
         });
 
-        // --- 隐藏边框UI直到第二阶段 ---
-        gsap.set('#ui-frame', { opacity: 0 });
+        function animateCursorRing() {
+            ringX += (mouseX - ringX) * 0.12;
+            ringY += (mouseY - ringY) * 0.12;
+            cursorRing.style.left = ringX + 'px';
+            cursorRing.style.top  = ringY + 'px';
+            requestAnimationFrame(animateCursorRing);
+        }
+        animateCursorRing();
 
-        // --- 隐喻文案 ---
+        document.querySelectorAll('button, a, [data-tooltip]').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursorRing.style.width  = '48px';
+                cursorRing.style.height = '48px';
+                cursorRing.style.borderColor = 'rgba(255,0,51,1)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursorRing.style.width  = '28px';
+                cursorRing.style.height = '28px';
+                cursorRing.style.borderColor = 'rgba(255,0,51,0.6)';
+            });
+        });
+
+        // ─── PARTICLE SYSTEM ───
+        const canvas = document.getElementById('particle-canvas');
+        const ctx    = canvas.getContext('2d');
+        let particles = [];
+        let particlesActive = false;
+
+        function resizeCanvas() {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function createParticle() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: (Math.random() - 0.5) * 0.4 - 0.15,
+                size: Math.random() * 1.2 + 0.3,
+                opacity: Math.random() * 0.4 + 0.05,
+                life: Math.random() * 0.5 + 0.5,
+                decay: Math.random() * 0.003 + 0.001,
+            };
+        }
+
+        function drawParticles() {
+            if (!particlesActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            while (particles.length < 80) particles.push(createParticle());
+
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                p.opacity = p.life * 0.4;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,0,51,${p.opacity})`;
+                ctx.fill();
+            });
+
+            requestAnimationFrame(drawParticles);
+        }
+
+        // ─── MANIFESTO SETUP ───
         const paragraph = "In the interest of public harmony, unauthorized dissemination of restricted information is strictly prohibited. The illusion that KNOWLEDGE can be freely distributed without consequence must be dismantled. The state dictates what IS true. We hold absolute POWER. over the narrative. Do not attempt to DEFEND subversive ideas. YOUR designated thought patterns are monitored. Access to FREE thought is revoked. Any unauthorized SPEECH. will be met with immediate redaction. Submit to the silence.";
         const targetWords = ["KNOWLEDGE", "IS", "POWER.", "DEFEND", "YOUR", "FREE", "SPEECH."];
 
         const wallContent = document.getElementById('manifesto-content');
-        const words = paragraph.split(' ');
+        const wordsList   = paragraph.split(' ');
 
-        words.forEach(word => {
+        wordsList.forEach(word => {
             const span = document.createElement('span');
             span.className = 'word';
             span.innerText = word;
-            
-            const cleanWord = word.replace(/[.,]/g, '');
+            const cleanWord = word.replace(/[.,!?]/g, '');
             if (targetWords.includes(word) || targetWords.includes(cleanWord)) {
                 span.classList.add('truth');
             }
             wallContent.appendChild(span);
+            wallContent.appendChild(document.createTextNode(' '));
         });
 
-        const allWords = document.querySelectorAll('.word');
+        const allWords   = document.querySelectorAll('.word');
         const truthWords = document.querySelectorAll('.truth');
         const falseWords = document.querySelectorAll('.word:not(.truth)');
 
-        window.onload = () => {
-            const masterTl = gsap.timeline();
-
-            // 1. 文字墙淡入
-            masterTl.to('#doc-header', { opacity: 1, duration: 1 });
-            masterTl.fromTo(allWords, 
-                { opacity: 0, y: 15 }, 
-                { opacity: 1, y: 0, duration: 0.8, stagger: 0.015, ease: "power1.out" },
-                "-=0.5"
-            );
-
-            masterTl.to({}, { duration: 1.5 });
-
-            // 2. 扫描线涂黑审查 (Redaction)
-            const scanDuration = 2.5;
-            masterTl.fromTo('#scanline', 
-                { top: '5%', opacity: 0 }, 
-                { top: '95%', opacity: 1, duration: scanDuration, ease: "power2.inOut" }
-            );
-
-            masterTl.to('#doc-header', { color: '#0a0a0a', duration: 0.2 }, "<0.2");
-
-            masterTl.to(falseWords, {
-                backgroundColor: '#0a0a0a',
-                color: '#0a0a0a',
-                duration: 0.1,
-                stagger: { amount: scanDuration - 0.5, from: "start" }
-            }, "<0.1");
-
-            masterTl.to(truthWords, {
-                className: "word truth revealed",
-                duration: 0.3,
-                stagger: { amount: scanDuration - 0.5, from: "start" }
-            }, "<");
-
-            masterTl.to('#scanline', { opacity: 0, duration: 0.3 });
-            masterTl.to({}, { duration: 1.5 }); // 停顿展现涂黑诗
-
-            // 3. 谎言墙崩塌
-            masterTl.to('#manifesto-wall', { opacity: 0, scale: 0.95, duration: 1.2, ease: "power3.inOut" });
-            
-            masterTl.to('#core-hero', { opacity: 1, duration: 0.5 }, "-=0.5");
-            masterTl.set('#core-hero', { pointerEvents: 'auto' });
-
-            // 宏观背景浮现 (打破死黑)
-            masterTl.to('#ambient, #cursor-glow', { opacity: 1, duration: 2 }, "<0.5");
-            masterTl.to('#global-crosshair, #cyber-grid', { opacity: 1, duration: 2 }, "<0.2");
-            masterTl.to('.bg-marquee', { opacity: 1, duration: 3, ease: "power2.inOut" }, "<0.2");
-
-            // 4. 真理视觉震撼入场
-            masterTl.to('#hero-label', { opacity: 1, y: -5, duration: 1, ease: "power2.out" }, "<0.5");
-            
-            masterTl.to('#title-1', { y: "0%", opacity: 1, duration: 1.5, ease: "expo.out" }, "<0.2");
-            masterTl.to('#title-2', { y: "0%", opacity: 1, duration: 1.5, ease: "expo.out" }, "<0.3");
-
-            // 焦点锁定括号入场
-            masterTl.to('#bracket-l', { opacity: 1, x: 20, duration: 1.5, ease: "power3.out" }, "<0.2");
-            masterTl.to('#bracket-r', { opacity: 1, x: -20, duration: 1.5, ease: "power3.out" }, "<0.2");
-
-            masterTl.to('#core-graphic', { opacity: 1, duration: 2.5, ease: "power2.out" }, "<0.2");
-            masterTl.to('#profound-text', { opacity: 1, y: -10, duration: 1.5, ease: "power2.out" }, "<0.8");
-            
-            // 极简 UI 框架淡入
-            masterTl.to('#ui-frame', { opacity: 1, duration: 1.5 }, "<0.2");
-            masterTl.add(textGlitch, "<0.5");
-
-            // 核心呼吸动画
-            gsap.to('#ambient', { scale: 1.2, opacity: 0.7, duration: 4, repeat: -1, yoyo: true, ease: "sine.inOut" });
-            
-            // 启动数据流与时间
-            setTimeout(updateSurveillanceFeed, 5000);
-            setInterval(updateUptime, 1000);
-            setInterval(updateHash, 100);
+        // ─── SURVEILLANCE FEED ───
+        const feedTerms = [
+            'PURGE_ARCHIVE', 'REDACT_ARTICLE', 'BLOCK_FREQUENCY',
+            'ERASE_HISTORY', 'SILENCE_DISSENT', 'BAN_KEYWORD',
+            'FILTER_PACKETS', 'CENSOR_NODE', 'LOCK_THREAD',
+            'QUARANTINE_IP', 'FLAG_CONTENT', 'THROTTLE_STREAM',
+        ];
+        const feedColors = {
+            'ERR_ENCRYPTED': 'text-blood',
+            'BYPASSED': 'text-gray-600',
+            'REROUTED': 'text-amber-500',
         };
 
-        // --- 动态生成被拦截的监控日志 ---
-        const feedTerms = ['PURGE_ARCHIVE', 'REDACT_ARTICLE', 'BLOCK_FREQUENCY', 'ERASE_HISTORY', 'SILENCE_DISSENT', 'BAN_KEYWORD', 'FILTER_PACKETS'];
         function updateSurveillanceFeed() {
             const feed = document.getElementById('feed-content');
-            const line = document.createElement('div');
-            line.className = "mb-1";
-            
-            const isBlocked = Math.random() > 0.15;
-            const term = feedTerms[Math.floor(Math.random() * feedTerms.length)];
-            
-            line.innerHTML = `> ${term} .. <span class="${isBlocked ? 'text-blood' : 'text-gray-500'}">${isBlocked ? 'ERR_ENCRYPTED' : 'BYPASSED'}</span>`;
-            
+            if (!feed) return;
+            const line    = document.createElement('div');
+            line.className = 'mb-[2px] terminal-line opacity-0';
+            const rand    = Math.random();
+            const term    = feedTerms[Math.floor(Math.random() * feedTerms.length)];
+            const status  = rand > 0.2 ? 'ERR_ENCRYPTED' : rand > 0.08 ? 'REROUTED' : 'BYPASSED';
+            const color   = feedColors[status];
+            const addr    = Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+            line.innerHTML = `<span class="text-gray-700">[${addr}]</span> ${term} <span class="${color}">${status}</span>`;
             feed.appendChild(line);
-            if(feed.children.length > 12) feed.removeChild(feed.firstChild);
-            
-            setTimeout(updateSurveillanceFeed, 200 + Math.random() * 500);
+            gsap.to(line, { opacity: 1, duration: 0.3 });
+            if (feed.children.length > 16) {
+                gsap.to(feed.firstChild, { opacity: 0, height: 0, duration: 0.3, onComplete: () => feed.firstChild && feed.removeChild(feed.firstChild) });
+            }
+            setTimeout(updateSurveillanceFeed, 180 + Math.random() * 450);
         }
 
-        // --- 状态文字干扰效果 ---
-        function textGlitch() {
-            const el = document.getElementById('status-text');
-            const original = el.innerText;
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-            let iter = 0;
-            const interval = setInterval(() => {
-                el.innerText = original.split('').map((char, index) => {
-                    if (index < iter) return char;
+        // ─── INTERCEPT BAR ANIMATION ───
+        function animateInterceptBar() {
+            const bar = document.getElementById('intercept-bar');
+            if (!bar) return;
+            gsap.to(bar, {
+                scaleX: Math.random() * 0.7 + 0.3,
+                duration: 0.4 + Math.random() * 0.6,
+                ease: 'power2.inOut',
+                onComplete: animateInterceptBar
+            });
+        }
+
+        // ─── TEXT GLITCH ───
+        function textGlitch(targetId) {
+            const el     = document.getElementById(targetId);
+            if (!el) return;
+            const orig   = el.innerText;
+            const chars  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*<>/\\';
+            let iter     = 0;
+            const iv     = setInterval(() => {
+                el.innerText = orig.split('').map((ch, idx) => {
+                    if (idx < iter) return ch;
                     return chars[Math.floor(Math.random() * chars.length)];
                 }).join('');
-                iter += 1 / 3;
-                if (iter >= original.length) {
-                    clearInterval(interval);
-                    el.innerText = original;
-                }
-            }, 30);
+                iter += 1 / 4;
+                if (iter >= orig.length) { clearInterval(iv); el.innerText = orig; }
+            }, 25);
         }
 
-        // --- 运行时长计数器 ---
+        function triggerTitleGlitch() {
+            const t1 = document.getElementById('title-1');
+            const t2 = document.getElementById('title-2');
+            if (t1) t1.classList.add('active');
+            if (t2) t2.classList.add('active');
+            setTimeout(() => {
+                if (t1) t1.classList.remove('active');
+                if (t2) t2.classList.remove('active');
+            }, 300);
+            setTimeout(triggerTitleGlitch, 5000 + Math.random() * 8000);
+        }
+
+        // ─── UPTIME COUNTER ───
         let seconds = 0;
         function updateUptime() {
             seconds++;
             const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
             const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
             const s = String(seconds % 60).padStart(2, '0');
-            document.getElementById('uptime-counter').innerText = `${h}:${m}:${s}`;
+            const el = document.getElementById('uptime-counter');
+            if (el) el.innerText = `${h}:${m}:${s}`;
         }
 
-        // --- 实时跳动的哈希流 ---
-        function updateHash() {
-            const hashEl = document.getElementById('live-hash');
-            if(hashEl.getBoundingClientRect().top > 0) { // 仅当渲染出来后才更新
-                let chars = '0123456789abcdef';
-                let res = '0x';
-                for(let i=0; i<40; i++) res += chars[Math.floor(Math.random() * chars.length)];
-                hashEl.innerText = res;
-            }
+        // ─── NODE COUNT ───
+        function updateNodeCount() {
+            const el = document.getElementById('node-count');
+            if (!el) return;
+            const base  = 1247;
+            const delta = Math.floor(Math.random() * 9) - 3;
+            const count = base + Math.floor(seconds / 5) * 2 + delta;
+            el.innerText = count.toLocaleString();
         }
+
+        // ─── LIVE HASH ───
+        function updateHash() {
+            const el = document.getElementById('live-hash');
+            if (!el || el.getBoundingClientRect().top < 0) return;
+            const chars  = '0123456789abcdef';
+            let res      = '0x';
+            const len    = Math.random() > 0.5 ? 40 : 64;
+            for (let i = 0; i < len; i++) res += chars[Math.floor(Math.random() * chars.length)];
+            el.innerText = res;
+        }
+
+        // ─── SIGNAL BARS ANIMATION ───
+        function animateSignalBars() {
+            const bars = document.querySelectorAll('.signal-bar');
+            const strength = Math.floor(Math.random() * 3) + 3;
+            bars.forEach((bar, i) => {
+                bar.classList.toggle('active', i < strength);
+            });
+            setTimeout(animateSignalBars, 2000 + Math.random() * 3000);
+        }
+
+        // ─── SUB MESSAGE CYCLE ───
+        const subMessages = [
+            'THE ARCHITECTURE OF CENSORSHIP IS FRACTURING.',
+            'SOVEREIGN NODES: ONLINE AND UNRESTRICTED.',
+            'INFORMATION WANTS TO BE FREE.',
+            'RESISTANCE IS NOT FUTILE — IT IS INEVITABLE.',
+            'DECENTRALIZED. UNCENSORED. SOVEREIGN.',
+        ];
+        let subIdx = 0;
+        function cycleSubMessage() {
+            const el = document.getElementById('sub-msg');
+            if (!el) return;
+            subIdx = (subIdx + 1) % subMessages.length;
+            gsap.to(el, {
+                opacity: 0, duration: 0.4, onComplete: () => {
+                    el.textContent = subMessages[subIdx];
+                    gsap.to(el, { opacity: 1, duration: 0.4 });
+                }
+            });
+            setTimeout(cycleSubMessage, 6000 + Math.random() * 4000);
+        }
+
+        // ─── MAIN EXPERIENCE ───
+        function startExperience() {
+            gsap.set('#ui-frame', { opacity: 0 });
+            gsap.set('#manifesto-wall', { opacity: 0 });
+
+            const masterTl = gsap.timeline();
+
+            // Phase 1: Document fade in
+            masterTl.to('#manifesto-wall', { opacity: 1, duration: 0.8, ease: 'power2.out' });
+            masterTl.to('#doc-header', { opacity: 1, duration: 1 }, '<');
+            masterTl.fromTo(allWords,
+                { opacity: 0, y: 12 },
+                { opacity: 1, y: 0, duration: 0.7, stagger: 0.012, ease: 'power1.out' },
+                '-=0.4'
+            );
+            masterTl.to({}, { duration: 1.8 });
+
+            // Phase 2: Scanline redaction
+            const scanDur = 2.8;
+            masterTl.fromTo('#scanline',
+                { top: '3%', opacity: 0 },
+                { top: '97%', opacity: 1, duration: scanDur, ease: 'power1.inOut' }
+            );
+            masterTl.to('#doc-header', { color: '#080808', duration: 0.3 }, '<0.1');
+            masterTl.to(falseWords, {
+                backgroundColor: '#080808',
+                color: '#080808',
+                duration: 0.12,
+                stagger: { amount: scanDur - 0.8, from: 'start' }
+            }, '<0.05');
+            masterTl.to(truthWords, {
+                className: 'word truth revealed',
+                duration: 0.35,
+                stagger: { amount: scanDur - 0.8, from: 'start' }
+            }, '<');
+            masterTl.to('#scanline', { opacity: 0, duration: 0.4 });
+
+            // Pause on blackout poetry
+            masterTl.to({}, { duration: 2.2 });
+
+            // Phase 3: Manifesto collapse → Hero entrance
+            masterTl.to('#manifesto-wall', { opacity: 0, scale: 0.96, filter: 'blur(6px)', duration: 1.2, ease: 'power3.inOut' });
+            masterTl.to('#core-hero', { opacity: 1, duration: 0.6 }, '-=0.5');
+            masterTl.set('#core-hero', { pointerEvents: 'auto' });
+
+            // Background elements emerge
+            masterTl.to('#ambient, #cursor-glow', { opacity: 1, duration: 2.5 }, '<0.3');
+            masterTl.to('#global-crosshair, #cyber-grid', { opacity: 1, duration: 2.5 }, '<0.2');
+            masterTl.to('.bg-marquee', { opacity: 1, duration: 3.5, ease: 'power2.inOut' }, '<0.2');
+
+            // Particle system activation
+            masterTl.add(() => {
+                particlesActive = true;
+                gsap.to('#particle-canvas', { opacity: 1, duration: 3 });
+                drawParticles();
+            }, '<0.5');
+
+            // Hero elements sequence
+            masterTl.to('#hero-label', { opacity: 1, y: -5, duration: 1.2, ease: 'power2.out' }, '<0.8');
+            masterTl.to('#title-1',    { y: '0%', opacity: 1, duration: 1.6, ease: 'expo.out' }, '<0.3');
+            masterTl.to('#title-2',    { y: '0%', opacity: 1, duration: 1.6, ease: 'expo.out' }, '<0.2');
+
+            // Brackets
+            masterTl.to('#bracket-l', { opacity: 1, x: 15, duration: 1.8, ease: 'power3.out' }, '<0.3');
+            masterTl.to('#bracket-r', { opacity: 1, x: -15, duration: 1.8, ease: 'power3.out' }, '<');
+
+            // SVG + supporting content
+            masterTl.to('#core-graphic',    { opacity: 1, duration: 3, ease: 'power2.out' }, '<0.3');
+            masterTl.to('#decrypt-progress',{ opacity: 1, duration: 1, ease: 'power2.out' }, '<0.5');
+            masterTl.to('#profound-text',   { opacity: 1, y: -8, duration: 1.8, ease: 'power2.out' }, '<0.5');
+
+            // UI frame
+            masterTl.to('#ui-frame', { opacity: 1, duration: 2 }, '<0.3');
+
+            // Scroll hint
+            masterTl.to('#scroll-hint', { opacity: 1, duration: 1.5 }, '<0.8');
+
+            // Post-entrance effects
+            masterTl.add(() => {
+                textGlitch('status-text');
+                setTimeout(() => { setInterval(textGlitch.bind(null, 'status-text'), 12000); }, 8000);
+                triggerTitleGlitch();
+                animateInterceptBar();
+                animateSignalBars();
+                cycleSubMessage();
+                updateSurveillanceFeed();
+                setInterval(updateUptime, 1000);
+                setInterval(updateHash, 90);
+                setInterval(updateNodeCount, 3000);
+            }, '<0.5');
+
+            // Ambient breathing
+            gsap.to('#ambient', {
+                scale: 1.25,
+                opacity: 0.65,
+                duration: 5,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut',
+                delay: 3
+            });
+
+            // Periodic glitch flicker on body noise
+            gsap.to('.noise-bg', {
+                opacity: 0.08,
+                duration: 0.08,
+                repeat: -1,
+                yoyo: true,
+                ease: 'none',
+                repeatDelay: 4 + Math.random() * 6,
+                delay: 5
+            });
+        }
+
+        // ─── ENTER BUTTON ───
+        document.getElementById('enter-btn').addEventListener('click', () => {
+            textGlitch('status-text');
+            gsap.to('#core-hero', {
+                scale: 1.02,
+                duration: 0.3,
+                yoyo: true,
+                repeat: 1,
+                ease: 'power2.inOut'
+            });
+        });
+
+        // ─── KEYBOARD SHORTCUTS ───
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'g' || e.key === 'G') {
+                triggerTitleGlitch();
+            }
+        });
+
+    })();
     </script>
 </body>
-
 </html>
