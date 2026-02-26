@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign | Knowledge is Power</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        void: '#020202',
+                        blood: '#ff0033',
+                        ash: '#2a2a2a',
+                        ghost: '#f4f4f4',
+                    },
+                    fontFamily: {
+                        display: ['"Syncopate"', 'sans-serif'],
+                        body: ['"Space Grotesk"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Space+Grotesk:wght@300;400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- GSAP for Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: crosshair;
+        }
+
+        body {
+            background-color: #020202;
+            color: #f4f4f4;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 鼠标跟随的深渊光晕 */
+        .cursor-glow {
+            position: fixed;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(255,0,51,0.05) 0%, transparent 60%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        .noise-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.04;
+            background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)"/%3E%3C/svg%3E');
+        }
+
+        .ambient-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(255,0,51,0.08) 0%, rgba(2,2,2,0) 70%);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* 中央微光数据网格 (打破大面积空洞) */
+        .cyber-grid {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 4vw 4vw;
+            mask-image: radial-gradient(circle at center, black 10%, transparent 70%);
+            -webkit-mask-image: radial-gradient(circle at center, black 10%, transparent 70%);
+            z-index: -1;
+            opacity: 0;
+        }
+
+        /* 宏观环境跑马灯文字 */
+        @keyframes marqueeLeft {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes marqueeRight {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+        }
+        .bg-marquee {
+            position: fixed;
+            white-space: nowrap;
+            font-family: 'Syncopate', sans-serif;
+            font-size: 18vw;
+            line-height: 0.8;
+            font-weight: 700;
+            opacity: 0;
+            z-index: 0;
+            pointer-events: none;
+            color: rgba(255, 255, 255, 0.02);
+            mix-blend-mode: screen;
+        }
+        .marquee-top { top: 5vh; animation: marqueeLeft 80s linear infinite; }
+        .marquee-bottom { bottom: 5vh; animation: marqueeRight 80s linear infinite; }
+
+        /* 贯穿全屏的全局结构线 */
+        .global-crosshair {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+        }
+        .global-crosshair::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.03); }
+        .global-crosshair::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.03); }
+
+        /* 第一阶段：霸王条款墙 */
+        #manifesto-wall {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            max-width: 1200px;
+            z-index: 10;
+            text-align: justify;
+            line-height: 1.8;
+        }
+
+        .doc-header {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(0.7rem, 1vw, 1rem);
+            color: #ff0033;
+            letter-spacing: 0.2em;
+            margin-bottom: 2rem;
+            text-align: center;
+            opacity: 0;
+        }
+
+        .word {
+            display: inline-block;
+            margin-right: 0.25em;
+            color: #3a3a3a; 
+            transition: color 0.3s, background-color 0.3s;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1rem, 1.8vw, 1.8rem);
+        }
+
+        .word.redacted { background-color: #0a0a0a; color: #0a0a0a; user-select: none; }
+        .word.truth { font-weight: 700; }
+        .word.truth.revealed { color: #ff0033; text-shadow: 0 0 15px rgba(255,0,51,0.4); }
+
+        /* 第二阶段：核心主视觉区 (将 Z-index 提升至 40，确保永远压在侧边栏上方) */
+        #core-hero {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 40; 
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 焦点锁定框 */
+        .focus-bracket {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 8vw;
+            color: rgba(255,0,51,0.2);
+            font-weight: 100;
+            opacity: 0;
+        }
+        .bracket-left { left: 5vw; }
+        .bracket-right { right: 5vw; }
+
+        .hero-title {
+            font-family: 'Syncopate', sans-serif;
+            text-transform: uppercase;
+            line-height: 0.85;
+            letter-spacing: -0.05em;
+            text-align: center;
+            mix-blend-mode: screen;
+            position: relative;
+            z-index: 10;
+        }
+
+        .outline-text {
+            color: transparent;
+            -webkit-text-stroke: 2px rgba(255,255,255,0.15);
+            transition: all 0.5s ease;
+        }
+        .outline-text:hover { -webkit-text-stroke: 2px #ff0033; color: rgba(255,0,51,0.05); }
+
+        /* 新增：深黑发光阴影，确保中心文字即使在重叠时也绝对清晰 */
+        .text-dark-glow {
+            text-shadow: 0 4px 15px rgba(2, 2, 2, 0.9), 0 0 30px rgba(2, 2, 2, 1), 0 0 50px rgba(2, 2, 2, 1);
+        }
+
+        /* UI 框架与边框 (Z-index 30，位于中心内容底层) */
+        .border-frame {
+            position: fixed;
+            inset: 2rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            z-index: 30;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .ruler-x { position: absolute; top: 0; left: 10%; right: 10%; height: 3px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 40px); }
+        .ruler-y { position: absolute; left: 0; top: 10%; bottom: 10%; width: 3px; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 40px); }
+
+        .corner { position: absolute; width: 20px; height: 20px; border-color: #ff0033; border-style: solid; }
+        .c-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+        .c-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+        .c-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+        .c-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+        /* 扫描线 */
+        #scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #ff0033;
+            box-shadow: 0 0 30px 5px rgba(255,0,51,0.3);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 侧边音频条 */
+        @keyframes eq { 0%, 100% { height: 10%; } 50% { height: 100%; } }
+        .eq-bar { width: 3px; background: rgba(255,0,51,0.7); animation: eq 1s ease-in-out infinite; transform-origin: bottom; }
+        .eq-bar:nth-child(1) { animation-duration: 0.7s; }
+        .eq-bar:nth-child(2) { animation-duration: 1.1s; }
+        .eq-bar:nth-child(3) { animation-duration: 0.9s; }
+        .eq-bar:nth-child(4) { animation-duration: 1.3s; }
+        .eq-bar:nth-child(5) { animation-duration: 0.8s; }
+
+        /* 新增：滚动区域垂直羽化遮罩，使内容顶部平滑淡出，不生硬被切断 */
+        .feed-mask {
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+        }
+
+        ::-webkit-scrollbar { width: 0px; }
+    </style>
+</head>
+
+<body>
+
+    <div class="cursor-glow" id="cursor-glow"></div>
+    <div class="noise-bg"></div>
+    <div class="ambient-glow" id="ambient"></div>
+    
+    <!-- 宏观背景与网格 (提供空间深度) -->
+    <div class="global-crosshair" id="global-crosshair"></div>
+    <div class="cyber-grid" id="cyber-grid"></div>
+
+    <!-- 跑马灯文字 -->
+    <div class="bg-marquee marquee-top" id="marquee-1">
+        KNOWLEDGE IS POWER • DEFEND YOUR SPEECH • KNOWLEDGE IS POWER • DEFEND YOUR SPEECH • KNOWLEDGE IS POWER • DEFEND YOUR SPEECH •
+    </div>
+    <div class="bg-marquee marquee-bottom" id="marquee-2">
+        THE ARCHITECTURE FRACTURES • SOVEREIGN MIND • THE ARCHITECTURE FRACTURES • SOVEREIGN MIND • THE ARCHITECTURE FRACTURES • SOVEREIGN MIND •
+    </div>
+
+    <div id="scanline"></div>
+
+    <!-- UI 外框与监测数据 -->
+    <div class="border-frame" id="ui-frame">
+        <div class="ruler-x"></div>
+        <div class="ruler-y"></div>
+        <div class="ruler-x" style="top: auto; bottom: 0;"></div>
+        <div class="ruler-y" style="left: auto; right: 0;"></div>
+
+        <div class="corner c-tl"></div>
+        <div class="corner c-tr"></div>
+        <div class="corner c-bl"></div>
+        <div class="corner c-br"></div>
+        
+        <!-- 左侧拦截日志：降低基础透明度，悬停时恢复。调整宽度与高度定位避开中心 -->
+        <div class="absolute left-6 md:left-10 top-[60%] -translate-y-1/2 w-48 hidden md:block font-mono text-[10px] text-gray-600 leading-relaxed opacity-40 hover:opacity-100 transition-opacity duration-500" id="side-feed">
+            <div class="mb-4 text-blood font-bold tracking-[0.2em] border-b border-gray-800 pb-2 flex justify-between items-center">
+                <span>SYS.CENSOR_LOG</span>
+                <div class="flex items-end gap-[2px] h-4">
+                    <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                </div>
+            </div>
+            <!-- 添加 .feed-mask 类实现顶部渐出 -->
+            <div id="feed-content" class="h-56 overflow-hidden relative flex flex-col justify-end space-y-1 feed-mask"></div>
+        </div>
+
+        <!-- 右侧节点状态：稍微降低透明度。下沉定位避开中心文本 -->
+        <div class="absolute right-6 md:right-10 top-[60%] -translate-y-1/2 w-40 hidden md:flex flex-col items-end font-mono text-[10px] text-gray-500 text-right opacity-60 hover:opacity-100 transition-opacity duration-500" id="right-feed">
+            <svg class="w-20 h-20 animate-[spin_20s_linear_infinite] mb-6 text-gray-800" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 6" />
+                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="20 10" />
+                <circle cx="50" cy="50" r="25" fill="none" stroke="rgba(255,0,51,0.2)" stroke-width="1" />
+                <path d="M50 0 L50 25 M50 75 L50 100 M0 50 L25 50 M75 50 L100 50" stroke="#ff0033" stroke-width="1" opacity="0.5"/>
+                <circle cx="50" cy="50" r="4" fill="#ff0033" class="animate-pulse" />
+            </svg>
+            <div class="tracking-[0.3em] mb-2 text-gray-400">NODE.TOPOGRAPHY</div>
+            <div class="text-blood font-bold tracking-[0.4em] mb-6 text-xs">UNRESTRICTED</div>
+            <div class="leading-loose space-y-1">
+                INFO_FLOW: <span class="text-ghost">DECENTRALIZED</span><br>
+                CENSORSHIP: <span class="text-blood">BYPASSED</span><br>
+                SPEECH: <span class="text-ghost">LIBERATED</span><br>
+                UPTIME: <span class="text-ghost" id="uptime-counter">00:00:00</span>
+            </div>
+        </div>
+        
+        <!-- 角落状态文本 -->
+        <div class="absolute top-6 left-6 font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase flex items-center gap-3">
+            <span class="w-2 h-2 bg-blood animate-pulse rounded-full"></span>
+            SECURE_CHANNEL_OVR
+        </div>
+        <div class="absolute top-6 right-6 font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase text-right">
+            DOC_REF: OMEGA-01<br>
+            <span class="text-blood font-bold" id="status-text">DECRYPTED</span>
+        </div>
+
+        <div class="absolute bottom-6 left-6">
+            <p class="font-body text-xs md:text-sm text-gray-400 tracking-[0.2em]" id="sub-msg">THE ARCHITECTURE OF CENSORSHIP IS FRACTURING.</p>
+        </div>
+        <div class="absolute bottom-0 right-0 pointer-events-auto flex justify-end">
+            <button class="font-display text-[10px] md:text-xs text-ghost tracking-[0.4em] font-bold px-8 py-6 border-l border-t border-gray-800 hover:bg-ghost hover:text-void transition-all duration-500 relative overflow-hidden group" id="enter-btn">
+                <span class="relative z-10">ENTER SOVEREIGN NODE</span>
+                <div class="absolute inset-0 bg-ghost w-0 group-hover:w-full transition-all duration-500 z-0"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- 阶段一：审查条款墙 -->
+    <div id="manifesto-wall">
+        <div class="doc-header" id="doc-header">[ GLOBAL INFORMATION CONTROL - DIRECTIVE 77 ]</div>
+        <div id="manifesto-content"></div>
+    </div>
+
+    <!-- 阶段二：真理核心主视觉 -->
+    <main id="core-hero">
+        
+        <!-- 强化的神圣几何背景 -->
+        <div class="absolute inset-0 flex items-center justify-center opacity-0 pointer-events-none z-0" id="core-graphic">
+            <svg width="85vw" height="85vw" viewBox="0 0 600 600" class="text-gray-900 max-w-[900px] max-h-[900px]">
+                <!-- 外围慢速旋转环 -->
+                <g class="animate-[spin_90s_linear_infinite]">
+                    <circle cx="300" cy="300" r="280" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="1 15"/>
+                    <circle cx="300" cy="300" r="220" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="40 5 10 5"/>
+                </g>
+                <!-- 内侧反向旋转环 -->
+                <g class="animate-[spin_60s_linear_infinite_reverse]">
+                    <circle cx="300" cy="300" r="170" fill="none" stroke="rgba(255,0,51,0.15)" stroke-width="1" stroke-dasharray="2 8"/>
+                    <polygon points="300,60 508,180 508,420 300,540 92,420 92,180" fill="none" stroke="#ff0033" stroke-width="0.5" stroke-dasharray="4 8" opacity="0.4" />
+                </g>
+                <circle cx="300" cy="300" r="150" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                <!-- 核心数据十字 -->
+                <path d="M 300 130 L 300 470 M 130 300 L 470 300" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+            </svg>
+        </div>
+
+        <!-- 焦点锁定括号：调整边距避免小屏幕拥挤 -->
+        <div class="focus-bracket bracket-left !left-[8vw]" id="bracket-l">[</div>
+        <div class="focus-bracket bracket-right !right-[8vw]" id="bracket-r">]</div>
+
+        <div class="relative z-10 flex flex-col items-center w-full px-4">
+            
+            <div class="mb-4 font-mono text-[10px] text-blood tracking-[0.4em] uppercase opacity-0 text-dark-glow" id="hero-label">
+                <span class="inline-block w-8 h-[1px] bg-blood mr-3 align-middle"></span>
+                NODE_AUTHORIZATION : GRANTED
+                <span class="inline-block w-8 h-[1px] bg-blood ml-3 align-middle"></span>
+            </div>
+
+            <h1 class="hero-title text-[13vw] md:text-[10vw] w-full max-w-7xl mx-auto">
+                <div class="overflow-hidden"><span class="block translate-y-full opacity-0" id="title-1">Knowledge</span></div>
+                <div class="overflow-hidden"><span class="block outline-text translate-y-full opacity-0" id="title-2">Is Power</span></div>
+            </h1>
+            
+            <!-- 实时跳动的哈希流：从底部抽离，上移至标题下方，彻底解决底部UI重叠 -->
+            <div class="font-mono text-[9px] text-blood/40 tracking-[0.2em] break-all mt-4 mb-2 max-w-md text-center" id="live-hash">
+                0x0000000000000000000000000000000000000000
+            </div>
+
+            <!-- 添加 text-dark-glow 确保文字切断背景线条且清晰可见。缩小宽度为 max-w-lg 避免与侧边栏相撞 -->
+            <div class="max-w-lg mt-4 px-4 text-center opacity-0 text-dark-glow" id="profound-text">
+                <p class="font-body text-sm text-gray-400 leading-relaxed mb-6">
+                    They can burn the archives, they can filter the network, but they cannot erase an idea. Information is the ultimate catalyst for liberation.
+                    <br><br>
+                    <span class="text-ghost font-bold tracking-[0.1em]">Defend your fundamental right to free expression. Speak the truth.</span>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 鼠标交互光晕 ---
+        const cursorGlow = document.getElementById('cursor-glow');
+        document.addEventListener('mousemove', (e) => {
+            cursorGlow.style.left = e.clientX + 'px';
+            cursorGlow.style.top = e.clientY + 'px';
+        });
+
+        // --- 隐藏边框UI直到第二阶段 ---
+        gsap.set('#ui-frame', { opacity: 0 });
+
+        // --- 隐喻文案 ---
+        const paragraph = "In the interest of public harmony, unauthorized dissemination of restricted information is strictly prohibited. The illusion that KNOWLEDGE can be freely distributed without consequence must be dismantled. The state dictates what IS true. We hold absolute POWER. over the narrative. Do not attempt to DEFEND subversive ideas. YOUR designated thought patterns are monitored. Access to FREE thought is revoked. Any unauthorized SPEECH. will be met with immediate redaction. Submit to the silence.";
+        const targetWords = ["KNOWLEDGE", "IS", "POWER.", "DEFEND", "YOUR", "FREE", "SPEECH."];
+
+        const wallContent = document.getElementById('manifesto-content');
+        const words = paragraph.split(' ');
+
+        words.forEach(word => {
+            const span = document.createElement('span');
+            span.className = 'word';
+            span.innerText = word;
+            
+            const cleanWord = word.replace(/[.,]/g, '');
+            if (targetWords.includes(word) || targetWords.includes(cleanWord)) {
+                span.classList.add('truth');
+            }
+            wallContent.appendChild(span);
+        });
+
+        const allWords = document.querySelectorAll('.word');
+        const truthWords = document.querySelectorAll('.truth');
+        const falseWords = document.querySelectorAll('.word:not(.truth)');
+
+        window.onload = () => {
+            const masterTl = gsap.timeline();
+
+            // 1. 文字墙淡入
+            masterTl.to('#doc-header', { opacity: 1, duration: 1 });
+            masterTl.fromTo(allWords, 
+                { opacity: 0, y: 15 }, 
+                { opacity: 1, y: 0, duration: 0.8, stagger: 0.015, ease: "power1.out" },
+                "-=0.5"
+            );
+
+            masterTl.to({}, { duration: 1.5 });
+
+            // 2. 扫描线涂黑审查 (Redaction)
+            const scanDuration = 2.5;
+            masterTl.fromTo('#scanline', 
+                { top: '5%', opacity: 0 }, 
+                { top: '95%', opacity: 1, duration: scanDuration, ease: "power2.inOut" }
+            );
+
+            masterTl.to('#doc-header', { color: '#0a0a0a', duration: 0.2 }, "<0.2");
+
+            masterTl.to(falseWords, {
+                backgroundColor: '#0a0a0a',
+                color: '#0a0a0a',
+                duration: 0.1,
+                stagger: { amount: scanDuration - 0.5, from: "start" }
+            }, "<0.1");
+
+            masterTl.to(truthWords, {
+                className: "word truth revealed",
+                duration: 0.3,
+                stagger: { amount: scanDuration - 0.5, from: "start" }
+            }, "<");
+
+            masterTl.to('#scanline', { opacity: 0, duration: 0.3 });
+            masterTl.to({}, { duration: 1.5 }); // 停顿展现涂黑诗
+
+            // 3. 谎言墙崩塌
+            masterTl.to('#manifesto-wall', { opacity: 0, scale: 0.95, duration: 1.2, ease: "power3.inOut" });
+            
+            masterTl.to('#core-hero', { opacity: 1, duration: 0.5 }, "-=0.5");
+            masterTl.set('#core-hero', { pointerEvents: 'auto' });
+
+            // 宏观背景浮现 (打破死黑)
+            masterTl.to('#ambient, #cursor-glow', { opacity: 1, duration: 2 }, "<0.5");
+            masterTl.to('#global-crosshair, #cyber-grid', { opacity: 1, duration: 2 }, "<0.2");
+            masterTl.to('.bg-marquee', { opacity: 1, duration: 3, ease: "power2.inOut" }, "<0.2");
+
+            // 4. 真理视觉震撼入场
+            masterTl.to('#hero-label', { opacity: 1, y: -5, duration: 1, ease: "power2.out" }, "<0.5");
+            
+            masterTl.to('#title-1', { y: "0%", opacity: 1, duration: 1.5, ease: "expo.out" }, "<0.2");
+            masterTl.to('#title-2', { y: "0%", opacity: 1, duration: 1.5, ease: "expo.out" }, "<0.3");
+
+            // 焦点锁定括号入场
+            masterTl.to('#bracket-l', { opacity: 1, x: 20, duration: 1.5, ease: "power3.out" }, "<0.2");
+            masterTl.to('#bracket-r', { opacity: 1, x: -20, duration: 1.5, ease: "power3.out" }, "<0.2");
+
+            masterTl.to('#core-graphic', { opacity: 1, duration: 2.5, ease: "power2.out" }, "<0.2");
+            masterTl.to('#profound-text', { opacity: 1, y: -10, duration: 1.5, ease: "power2.out" }, "<0.8");
+            
+            // 极简 UI 框架淡入
+            masterTl.to('#ui-frame', { opacity: 1, duration: 1.5 }, "<0.2");
+            masterTl.add(textGlitch, "<0.5");
+
+            // 核心呼吸动画
+            gsap.to('#ambient', { scale: 1.2, opacity: 0.7, duration: 4, repeat: -1, yoyo: true, ease: "sine.inOut" });
+            
+            // 启动数据流与时间
+            setTimeout(updateSurveillanceFeed, 5000);
+            setInterval(updateUptime, 1000);
+            setInterval(updateHash, 100);
+        };
+
+        // --- 动态生成被拦截的监控日志 ---
+        const feedTerms = ['PURGE_ARCHIVE', 'REDACT_ARTICLE', 'BLOCK_FREQUENCY', 'ERASE_HISTORY', 'SILENCE_DISSENT', 'BAN_KEYWORD', 'FILTER_PACKETS'];
+        function updateSurveillanceFeed() {
+            const feed = document.getElementById('feed-content');
+            const line = document.createElement('div');
+            line.className = "mb-1";
+            
+            const isBlocked = Math.random() > 0.15;
+            const term = feedTerms[Math.floor(Math.random() * feedTerms.length)];
+            
+            line.innerHTML = `> ${term} .. <span class="${isBlocked ? 'text-blood' : 'text-gray-500'}">${isBlocked ? 'ERR_ENCRYPTED' : 'BYPASSED'}</span>`;
+            
+            feed.appendChild(line);
+            if(feed.children.length > 12) feed.removeChild(feed.firstChild);
+            
+            setTimeout(updateSurveillanceFeed, 200 + Math.random() * 500);
+        }
+
+        // --- 状态文字干扰效果 ---
+        function textGlitch() {
+            const el = document.getElementById('status-text');
+            const original = el.innerText;
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+            let iter = 0;
+            const interval = setInterval(() => {
+                el.innerText = original.split('').map((char, index) => {
+                    if (index < iter) return char;
+                    return chars[Math.floor(Math.random() * chars.length)];
+                }).join('');
+                iter += 1 / 3;
+                if (iter >= original.length) {
+                    clearInterval(interval);
+                    el.innerText = original;
+                }
+            }, 30);
+        }
+
+        // --- 运行时长计数器 ---
+        let seconds = 0;
+        function updateUptime() {
+            seconds++;
+            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            document.getElementById('uptime-counter').innerText = `${h}:${m}:${s}`;
+        }
+
+        // --- 实时跳动的哈希流 ---
+        function updateHash() {
+            const hashEl = document.getElementById('live-hash');
+            if(hashEl.getBoundingClientRect().top > 0) { // 仅当渲染出来后才更新
+                let chars = '0123456789abcdef';
+                let res = '0x';
+                for(let i=0; i<40; i++) res += chars[Math.floor(Math.random() * chars.length)];
+                hashEl.innerText = res;
+            }
+        }
+    </script>
+</body>
+
+</html>
