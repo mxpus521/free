@@ -68,7 +68,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            cursor: crosshair;
         }
 
         html { scroll-behavior: smooth; }
@@ -81,49 +80,6 @@
             font-family: 'Space Grotesk', sans-serif;
         }
 
-        /* ─── CURSOR GLOW ─── */
-        .cursor-glow {
-            position: fixed;
-            width: 700px;
-            height: 700px;
-            background: radial-gradient(circle, rgba(255,0,51,0.06) 0%, transparent 65%);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 1;
-            opacity: 0;
-            transition: opacity 2s ease;
-            will-change: transform;
-        }
-
-        /* ─── CUSTOM CURSOR DOT ─── */
-        .cursor-dot {
-            position: fixed;
-            width: 6px;
-            height: 6px;
-            background: var(--blood);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.5s ease, transform 0.1s ease;
-            box-shadow: 0 0 10px var(--blood), 0 0 20px rgba(255,0,51,0.5);
-        }
-        .cursor-ring {
-            position: fixed;
-            width: 28px;
-            height: 28px;
-            border: 1px solid rgba(255,0,51,0.6);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 9998;
-            opacity: 0;
-            transition: opacity 0.5s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
-        }
-        body:hover .cursor-dot, body:hover .cursor-ring { opacity: 1; }
-
         /* ─── NOISE OVERLAY ─── */
         .noise-bg {
             position: fixed;
@@ -133,7 +89,7 @@
             opacity: 0.035;
             background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)"/%3E%3C/svg%3E');
             background-size: 256px 256px;
-            animation: noiseShift 0.5s steps(2) infinite;
+            animation: noiseShift 2s steps(2) infinite;
         }
         @keyframes noiseShift {
             0% { background-position: 0 0; }
@@ -147,7 +103,7 @@
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) translateZ(0);
             width: 80vw;
             height: 80vw;
             max-width: 900px;
@@ -156,6 +112,7 @@
             z-index: 0;
             pointer-events: none;
             opacity: 0;
+            will-change: transform, opacity;
         }
 
         /* ─── BACKGROUND MARQUEE ─── */
@@ -180,6 +137,7 @@
             color: rgba(255,255,255,0.018);
             mix-blend-mode: screen;
             letter-spacing: -0.02em;
+            will-change: transform;
         }
         .marquee-top { top: 4vh; animation: marqueeLeft 70s linear infinite; }
         .marquee-bottom { bottom: 4vh; animation: marqueeRight 70s linear infinite; }
@@ -520,10 +478,12 @@
         .status-ring {
             animation: spin 25s linear infinite;
             transform-origin: center;
+            will-change: transform;
         }
         .status-ring-inner {
             animation: spin 15s linear infinite reverse;
             transform-origin: center;
+            will-change: transform;
         }
 
         /* ─── TERMINAL LINES ─── */
@@ -546,6 +506,7 @@
             z-index: 0;
             pointer-events: none;
             opacity: 0;
+            will-change: opacity;
         }
 
         /* ─── SCROLL INDICATOR ─── */
@@ -735,13 +696,8 @@
         <div class="load-status" id="load-status">INITIALIZING SECURE CHANNEL...</div>
     </div>
 
-    <!-- ─── CUSTOM CURSORS ─── -->
-    <div class="cursor-dot" id="cursor-dot"></div>
-    <div class="cursor-ring" id="cursor-ring"></div>
-
     <!-- ─── BACKGROUND LAYERS ─── -->
     <canvas id="particle-canvas"></canvas>
-    <div class="cursor-glow" id="cursor-glow"></div>
     <div class="noise-bg"></div>
     <div class="scanlines-overlay"></div>
     <div class="vignette"></div>
@@ -1045,44 +1001,6 @@
             }
         }, 120);
 
-        // ─── CUSTOM CURSOR ───
-        const cursorDot  = document.getElementById('cursor-dot');
-        const cursorRing = document.getElementById('cursor-ring');
-        const cursorGlow = document.getElementById('cursor-glow');
-        let mouseX = 0, mouseY = 0;
-        let ringX = 0, ringY = 0;
-
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            cursorDot.style.left  = mouseX + 'px';
-            cursorDot.style.top   = mouseY + 'px';
-            cursorGlow.style.left = mouseX + 'px';
-            cursorGlow.style.top  = mouseY + 'px';
-        });
-
-        function animateCursorRing() {
-            ringX += (mouseX - ringX) * 0.12;
-            ringY += (mouseY - ringY) * 0.12;
-            cursorRing.style.left = ringX + 'px';
-            cursorRing.style.top  = ringY + 'px';
-            requestAnimationFrame(animateCursorRing);
-        }
-        animateCursorRing();
-
-        document.querySelectorAll('button, a, [data-tooltip]').forEach(el => {
-            el.addEventListener('mouseenter', () => {
-                cursorRing.style.width  = '48px';
-                cursorRing.style.height = '48px';
-                cursorRing.style.borderColor = 'rgba(255,0,51,1)';
-            });
-            el.addEventListener('mouseleave', () => {
-                cursorRing.style.width  = '28px';
-                cursorRing.style.height = '28px';
-                cursorRing.style.borderColor = 'rgba(255,0,51,0.6)';
-            });
-        });
-
         // ─── PARTICLE SYSTEM ───
         const canvas = document.getElementById('particle-canvas');
         const ctx    = canvas.getContext('2d');
@@ -1100,12 +1018,12 @@
             return {
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                vx: (Math.random() - 0.5) * 0.4,
-                vy: (Math.random() - 0.5) * 0.4 - 0.15,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3 - 0.1,
                 size: Math.random() * 1.2 + 0.3,
                 opacity: Math.random() * 0.4 + 0.05,
                 life: Math.random() * 0.5 + 0.5,
-                decay: Math.random() * 0.003 + 0.001,
+                decay: Math.random() * 0.002 + 0.0005,
             };
         }
 
@@ -1113,7 +1031,7 @@
             if (!particlesActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            while (particles.length < 80) particles.push(createParticle());
+            while (particles.length < 40) particles.push(createParticle());
 
             particles = particles.filter(p => p.life > 0);
             particles.forEach(p => {
@@ -1183,7 +1101,7 @@
             if (feed.children.length > 16) {
                 gsap.to(feed.firstChild, { opacity: 0, height: 0, duration: 0.3, onComplete: () => feed.firstChild && feed.removeChild(feed.firstChild) });
             }
-            setTimeout(updateSurveillanceFeed, 180 + Math.random() * 450);
+            setTimeout(updateSurveillanceFeed, 800 + Math.random() * 1200);
         }
 
         // ─── INTERCEPT BAR ANIMATION ───
@@ -1337,7 +1255,7 @@
             masterTl.set('#core-hero', { pointerEvents: 'auto' });
 
             // Background elements emerge
-            masterTl.to('#ambient, #cursor-glow', { opacity: 1, duration: 2.5 }, '<0.3');
+            masterTl.to('#ambient', { opacity: 1, duration: 2.5 }, '<0.3');
             masterTl.to('#global-crosshair, #cyber-grid', { opacity: 1, duration: 2.5 }, '<0.2');
             masterTl.to('.bg-marquee', { opacity: 1, duration: 3.5, ease: 'power2.inOut' }, '<0.2');
 
@@ -1378,7 +1296,7 @@
                 cycleSubMessage();
                 updateSurveillanceFeed();
                 setInterval(updateUptime, 1000);
-                setInterval(updateHash, 90);
+                setInterval(updateHash, 500);
                 setInterval(updateNodeCount, 3000);
             }, '<0.5');
 
